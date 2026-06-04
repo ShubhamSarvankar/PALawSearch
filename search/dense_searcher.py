@@ -1,35 +1,19 @@
-"""
-Dense Vector Searcher using Legal-BERT
-Coarse-grained retrieval using semantic search
-"""
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config import ES_INDEX_DENSE, TOP_K_RERANK
+from config.settings import settings
 from models.dual_encoder import DualEncoder
 
 
 class DenseSearcher:
     def __init__(self, es_client=None, encoder=None):
-        """
-        Initialize dense searcher
-
-        Args:
-            es_client: Elasticsearch client instance (optional, for connection sharing)
-            encoder: DualEncoder instance, creates new one if None
-        """
         if es_client is None:
             from elasticsearch import Elasticsearch
-            from config import ES_PASSWORD, ES_HOST
             self.es = Elasticsearch(
-                ES_HOST,
-                basic_auth=("elastic", ES_PASSWORD),
-                verify_certs=False
+                settings.es_host,
+                basic_auth=(settings.es_user, settings.es_password),
+                verify_certs=False,
             )
         else:
             self.es = es_client
-        self.index_name = ES_INDEX_DENSE
+        self.index_name = settings.es_index_dense
         self.encoder = encoder or DualEncoder()
 
     def search(self, query, size=10, from_=0):
@@ -118,7 +102,9 @@ class DenseSearcher:
 
         return response["hits"]["hits"][0]["_source"]
 
-    def search_with_full_text(self, query, size=TOP_K_RERANK):
+    def search_with_full_text(self, query, size=None):
+        if size is None:
+            size = settings.top_k_rerank
         """
         Search and return results with full_text for reranking
 

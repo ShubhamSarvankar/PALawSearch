@@ -21,7 +21,7 @@ Requires:
           "dense_vector": [ ... floats ... ]
         }
     - Elasticsearch running locally
-    - config.py with ES_HOST, ES_PASSWORD, ES_INDEX_DENSE, DENSE_VECTOR_DIM
+    - config.py with settings.es_host, settings.es_password, settings.es_index_dense, settings.dense_vector_dim
 """
 
 import json
@@ -32,7 +32,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
 from tqdm import tqdm
 
-from config import ES_HOST, ES_PASSWORD, ES_INDEX_DENSE, DENSE_VECTOR_DIM
+from config.settings import settings
 
 # Silence insecure HTTPS warnings for local dev
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -49,16 +49,16 @@ def create_dense_index() -> Elasticsearch:
     indexing.dense_indexer (which pulls in torch / DualEncoder).
     """
     es = Elasticsearch(
-        ES_HOST,
-        basic_auth=("elastic", ES_PASSWORD),
+        settings.es_host,
+        basic_auth=("elastic", settings.es_password),
         verify_certs=False,
         request_timeout=60,
     )
 
     # Drop existing index if present (fresh rebuild)
-    if es.indices.exists(index=ES_INDEX_DENSE):
-        print(f"Deleting existing index: {ES_INDEX_DENSE}")
-        es.indices.delete(index=ES_INDEX_DENSE)
+    if es.indices.exists(index=settings.es_index_dense):
+        print(f"Deleting existing index: {settings.es_index_dense}")
+        es.indices.delete(index=settings.es_index_dense)
 
     mapping = {
         "settings": {
@@ -114,7 +114,7 @@ def create_dense_index() -> Elasticsearch:
                 },
                 "dense_vector": {
                     "type": "dense_vector",
-                    "dims": DENSE_VECTOR_DIM,
+                    "dims": settings.dense_vector_dim,
                     "index": True,
                     "similarity": "cosine",
                 },
@@ -122,10 +122,10 @@ def create_dense_index() -> Elasticsearch:
         },
     }
 
-    es.indices.create(index=ES_INDEX_DENSE, body=mapping)
+    es.indices.create(index=settings.es_index_dense, body=mapping)
     # Optimize for bulk indexing: no replicas and infrequent refreshes
     es.indices.put_settings(
-        index=ES_INDEX_DENSE,
+        index=settings.es_index_dense,
         body={
             "index": {
                 "refresh_interval": "-1",
@@ -133,7 +133,7 @@ def create_dense_index() -> Elasticsearch:
             }
         },
     )
-    print(f"Created dense index '{ES_INDEX_DENSE}'.")
+    print(f"Created dense index '{settings.es_index_dense}'.")
     return es
 
 
@@ -176,7 +176,7 @@ def main() -> None:
     # 2. (Re)create the dense index using our local helper
     print("Creating dense vector index via create_dense_index()...")
     es = create_dense_index()
-    print(f"Index '{ES_INDEX_DENSE}' is ready.")
+    print(f"Index '{settings.es_index_dense}' is ready.")
 
     # 3. Stream embeddings.jsonl and bulk index in batches
     print(f"Indexing documents from {EMBEDDINGS_PATH}...")
@@ -194,7 +194,7 @@ def main() -> None:
 
             # Validate dense vector
             dv = record.get("dense_vector")
-            if not isinstance(dv, list) or len(dv) != DENSE_VECTOR_DIM:
+            if not isinstance(dv, list) or len(dv) != settings.dense_vector_dim:
                 # Skip malformed entries
                 continue
 
@@ -202,7 +202,7 @@ def main() -> None:
 
             actions.append(
                 {
-                    "_index": ES_INDEX_DENSE,
+                    "_index": settings.es_index_dense,
                     "_id": doc_id,  # stable id in ES
                     "_source": {
                         "id": doc_id,
@@ -227,7 +227,7 @@ def main() -> None:
         if actions:
             total_indexed += index_batch(es, actions, failed_docs)
 
-    print(f"Successfully indexed {total_indexed} documents into '{ES_INDEX_DENSE}'.")
+    print(f"Successfully indexed {total_indexed} documents into '{settings.es_index_dense}'.")
 
     if failed_docs:
         print(f"{len(failed_docs)} document(s) failed to index.")
@@ -237,7 +237,7 @@ def main() -> None:
 
     # 4. Restore normal index settings after heavy indexing
     es.indices.put_settings(
-        index=ES_INDEX_DENSE,
+        index=settings.es_index_dense,
         body={
             "index": {
                 "refresh_interval": "1s",

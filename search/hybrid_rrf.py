@@ -1,11 +1,3 @@
-"""
-Hybrid Fusion: BM25 + Dense KNN Fusion
-Combines lexical (BM25) and semantic (dense vector) search using Reciprocal Rank Fusion
-"""
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from search.bm25_searcher import BM25Searcher
 from search.dense_searcher import DenseSearcher
 

@@ -1,15 +1,8 @@
-"""
-Flask Application Setup
-"""
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from flask import Flask
 from flask_cors import CORS
 from elasticsearch import Elasticsearch
 
-from config import ES_PASSWORD, ES_HOST, API_HOST, API_PORT, API_DEBUG
+from config.settings import settings
 from search.bm25_searcher import BM25Searcher
 from search.dense_searcher import DenseSearcher
 from search.dense_reranker import Reranker
@@ -19,16 +12,12 @@ from api.routes import register_routes
 
 
 def create_app():
-    """
-    Create and configure Flask application
-    """
     app = Flask(__name__)
     CORS(app)
 
-    # Single ES connection shared across all searchers
     es = Elasticsearch(
-        ES_HOST,
-        basic_auth=("elastic", ES_PASSWORD),
+        settings.es_host,
+        basic_auth=(settings.es_user, settings.es_password),
         verify_certs=False
     )
 
@@ -99,7 +88,7 @@ def run_app():
     print("  - /ask: Hybrid fusion (BM25 + Dense) retrieval + Ollama LLM generation")
 
     app = create_app()
-    app.run(debug=API_DEBUG, host=API_HOST, port=API_PORT)
+    app.run(debug=settings.api_debug, host=settings.api_host, port=settings.api_port)
 
 
 if __name__ == '__main__':

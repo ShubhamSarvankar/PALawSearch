@@ -1,27 +1,19 @@
-"""
-BM25 Searcher - Baseline retrieval method
-"""
 import re
-from config import ES_INDEX_BM25
+from config.settings import settings
 
 
 class BM25Searcher:
     def __init__(self, es_client=None):
-        """
-        Args:
-            es_client: Elasticsearch client instance (optional, for connection sharing)
-        """
         if es_client is None:
             from elasticsearch import Elasticsearch
-            from config import ES_PASSWORD, ES_HOST
             self.es = Elasticsearch(
-                ES_HOST,
-                basic_auth=("elastic", ES_PASSWORD),
-                verify_certs=False
+                settings.es_host,
+                basic_auth=(settings.es_user, settings.es_password),
+                verify_certs=False,
             )
         else:
             self.es = es_client
-        self.index_name = ES_INDEX_BM25
+        self.index_name = settings.es_index_bm25
 
     def search(
         self,
@@ -203,6 +195,5 @@ if __name__ == "__main__":
     results = searcher.search(query, size=5)
 
     print(f"Found {results['total']} results")
-    print("\nTop 5 results:")
     for i, result in enumerate(results['results'], 1):
         print(f"{i}. {result['name']} (score: {result['score']:.4f})")

@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pa-lawsearch"
+version = "2.0.0"
+requires-python = ">=3.11"
+dependencies = [
+    # Core API
+    "flask==3.0.0",
+    "flask-cors==4.0.0",
+    # Elasticsearch client — must match server major version (8.x)
+    "elasticsearch==8.14.0",
+    "redis>=5.0.0",
+    # Settings
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    # ML — torch is NOT listed here; install separately with the cu128 index:
+    #   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+    # (or nightly cu128 if stable wheel lacks sm_120 for Blackwell)
+    "transformers>=4.40",
+    "sentence-transformers>=3.0",
+    "accelerate>=0.30",
+    # Data / utilities
+    "numpy>=1.26",
+    "pandas>=2.0",
+    "tqdm>=4.66",
+    "orjson>=3.9",
+    "scikit-learn>=1.4",      # Cohen's kappa, train/eval splits
+    "datasets>=2.19",          # HuggingFace datasets for external benchmark
+    "networkx>=3.2",           # citation graph
+    "matplotlib>=3.8",         # training curves, plots
+    # Evaluation metric cross-check
+    "pytrec-eval-terrier>=0.5",
+    # Anthropic SDK — Phase 4 LLM judge
+    "anthropic>=0.28",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "black>=24.0",
+    "mypy>=1.9",
+    "pre-commit>=3.7",
+    "detect-secrets>=1.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["data*", "frontend*", "docs*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

@@ -1,33 +1,17 @@
-"""
-BM25 + Cross-Encoder Reranker
-Two-stage retrieval: BM25 coarse retrieval + Cross-encoder reranking
-"""
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from config.settings import settings
 from models.cross_encoder import CrossEncoder
 from search.bm25_searcher import BM25Searcher
-from config import TOP_K_RERANK, ES_INDEX_BM25
 
 
 class BM25Reranker:
     def __init__(self, es_client=None, bm25_searcher=None, cross_encoder=None):
-        """
-        Initialize BM25 + Cross-encoder reranker
-
-        Args:
-            es_client: Elasticsearch client instance (optional, for connection sharing)
-            bm25_searcher: BM25Searcher instance for coarse retrieval
-            cross_encoder: CrossEncoder instance for reranking
-        """
         if bm25_searcher is None:
             self.bm25_searcher = BM25Searcher(es_client=es_client)
         else:
             self.bm25_searcher = bm25_searcher
         self.cross_encoder = cross_encoder or CrossEncoder()
         self.es = es_client or self.bm25_searcher.es
-        self.index_name = ES_INDEX_BM25
+        self.index_name = settings.es_index_bm25
 
     def search_with_full_text(self, query, size=100):
         """
@@ -70,7 +54,9 @@ class BM25Reranker:
 
         return candidates
 
-    def search_and_rerank(self, query, top_k=TOP_K_RERANK):
+    def search_and_rerank(self, query, top_k=None):
+        if top_k is None:
+            top_k = settings.top_k_rerank
         """
         Two-stage retrieval: BM25 coarse retrieval + Cross-encoder reranking
 
@@ -124,7 +110,6 @@ if __name__ == "__main__":
     results = reranker.search_and_rerank(query, top_k=TOP_K_RERANK)
 
     print(f"\nFound {results['total']} candidates")
-    print(f"\nTop 5 after reranking:")
     for i, result in enumerate(results['results'][:5], 1):
         print(f"{i}. {result['name']}")
         print(f"   Rerank score: {result['score']:.4f}, BM25 score: {result['bm25_score']:.4f}")

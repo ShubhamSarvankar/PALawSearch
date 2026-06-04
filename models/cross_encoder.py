@@ -1,20 +1,19 @@
-"""
-Cross-Encoder for reranking
-Used for fine-grained reranking stage
-"""
 try:
     import torch
     TORCH_IMPORT_ERROR = None
 except OSError as e:
+    # DLL init can fail on Windows if CUDA runtime is missing
     torch = None
     TORCH_IMPORT_ERROR = e
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from config import CROSS_ENCODER_MODEL
+from config.settings import settings
 import numpy as np
 
 
 class CrossEncoder:
-    def __init__(self, model_name=CROSS_ENCODER_MODEL, device=None):
+    def __init__(self, model_name=None, device=None):
+        if model_name is None:
+            model_name = settings.cross_encoder_model_path
         """
         Initialize cross-encoder model for reranking
 

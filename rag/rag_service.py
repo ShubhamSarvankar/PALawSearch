@@ -1,32 +1,17 @@
-"""
-RAG Service: Retrieval-Augmented Generation for Legal Q&A
-Combines hybrid retrieval (BM25 + Dense KNN) with Ollama LLM
-"""
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import requests
-from search.bm25_dense_for_rag import HybridFusion
+from config.settings import settings
+from search.hybrid_rrf import HybridFusion
 
 
 class RAGService:
-    def __init__(self, es_client=None, hybrid_fusion=None, ollama_url="http://localhost:11434"):
-        """
-        Initialize RAG service
-
-        Args:
-            es_client: Elasticsearch client instance (optional)
-            hybrid_fusion: HybridFusion instance (optional)
-            ollama_url: Ollama API URL (default: http://localhost:11434)
-        """
+    def __init__(self, es_client=None, hybrid_fusion=None):
         if hybrid_fusion is None:
             self.retriever = HybridFusion(es_client=es_client)
         else:
             self.retriever = hybrid_fusion
 
-        self.ollama_url = ollama_url
-        self.model = "qwen3:8b"  # Ollama model name
+        self.ollama_url = settings.ollama_url
+        self.model = settings.ollama_model
 
     def retrieve_context(self, query, k=5, max_chars_per_doc=5000):
         """
@@ -196,15 +181,16 @@ if __name__ == "__main__":
     print("Initializing RAG service...")
     rag = RAGService()
 
-    # Test query
     query = "What are the requirements for contract formation in Pennsylvania?"
     print(f"\nQuestion: {query}\n")
 
-    result = rag.ask(query, k=3)
-
-    print("Answer:")
-    print(result['answer'])
-    print("\n" + "="*80)
-    print("\nCitations:")
-    for i, citation in enumerate(result['citations'], 1):
-        print(f"{i}. {citation['name']} ({citation['court']}, {citation['date']})")
+    # ask() is a generator — iterate chunks
+    for chunk in rag.ask(query, k=3):
+        if chunk["type"] == "citations":
+            print("Citations:")
+            for i, c in enumerate(chunk["citations"], 1):
+                print(f"  {i}. {c['name']} ({c['court']}, {c['date']})")
+            print("\nAnswer:")
+        elif chunk["type"] == "answer":
+            print(chunk["chunk"], end="", flush=True)
+    print()

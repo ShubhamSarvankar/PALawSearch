@@ -1,33 +1,19 @@
-"""
-Reranker using Cross-Encoder
-Fine-grained reranking stage after coarse retrieval
-"""
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from config.settings import settings
 from models.cross_encoder import CrossEncoder
 from search.dense_searcher import DenseSearcher
-from config import TOP_K_RERANK
 
 
 class Reranker:
     def __init__(self, es_client=None, dense_searcher=None, cross_encoder=None):
-        """
-        Initialize reranker
-
-        Args:
-            es_client: Elasticsearch client instance (optional, for connection sharing)
-            dense_searcher: DenseSearcher instance for coarse retrieval
-            cross_encoder: CrossEncoder instance for reranking
-        """
         if dense_searcher is None:
             self.dense_searcher = DenseSearcher(es_client=es_client)
         else:
             self.dense_searcher = dense_searcher
         self.cross_encoder = cross_encoder or CrossEncoder()
 
-    def search_and_rerank(self, query, top_k=TOP_K_RERANK):
+    def search_and_rerank(self, query, top_k=None):
+        if top_k is None:
+            top_k = settings.top_k_rerank
         """
         Two-stage retrieval: coarse retrieval + fine-grained reranking
 
@@ -80,10 +66,9 @@ if __name__ == "__main__":
     print(f"\nQuery: {query}")
     print(f"Retrieving and reranking top {TOP_K_RERANK} candidates...")
 
-    results = reranker.search_and_rerank(query, top_k=TOP_K_RERANK)
+    results = reranker.search_and_rerank(query)
 
     print(f"\nFound {results['total']} candidates")
-    print(f"\nTop {min(5, len(results['results']))} after reranking:")
     for i, result in enumerate(results['results'][:5], 1):
         print(f"{i}. {result['name']}")
         print(f"   Rerank score: {result['score']:.4f}, Dense score: {result['dense_score']:.4f}")

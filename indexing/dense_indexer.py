@@ -8,9 +8,7 @@ import os
 import zipfile
 from tqdm import tqdm
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config import ES_PASSWORD, ES_HOST, ES_INDEX_DENSE, DENSE_VECTOR_DIM
+from config.settings import settings
 from models.dual_encoder import DualEncoder
 
 
@@ -19,8 +17,8 @@ def create_dense_index():
     Create dense vector index with dense_vector field
     """
     es = Elasticsearch(
-        ES_HOST,
-        basic_auth=("elastic", ES_PASSWORD),
+        settings.es_host,
+        basic_auth=("elastic", settings.es_password),
         verify_certs=False
     )
 
@@ -66,7 +64,7 @@ def create_dense_index():
                 },
                 "dense_vector": {
                     "type": "dense_vector",
-                    "dims": DENSE_VECTOR_DIM,
+                    "dims": settings.dense_vector_dim,
                     "index": True,
                     "similarity": "cosine"
                 }
@@ -74,12 +72,12 @@ def create_dense_index():
         }
     }
 
-    if es.indices.exists(index=ES_INDEX_DENSE):
-        print(f"Index {ES_INDEX_DENSE} already exists. Deleting...")
-        es.indices.delete(index=ES_INDEX_DENSE)
+    if es.indices.exists(index=settings.es_index_dense):
+        print(f"Index {settings.es_index_dense} already exists. Deleting...")
+        es.indices.delete(index=settings.es_index_dense)
 
-    es.indices.create(index=ES_INDEX_DENSE, body=mapping)
-    print(f"Created index: {ES_INDEX_DENSE}")
+    es.indices.create(index=settings.es_index_dense, body=mapping)
+    print(f"Created index: {settings.es_index_dense}")
 
     return es
 
@@ -147,7 +145,7 @@ def index_documents(es, encoder, data_dir="data", batch_size=8):
 
             for doc, embedding in zip(batch_docs, embeddings):
                 doc["dense_vector"] = embedding.tolist()
-                es.index(index=ES_INDEX_DENSE, document=doc)
+                es.index(index=settings.es_index_dense, document=doc)
 
             batch_docs = []
             batch_texts = []
@@ -156,9 +154,9 @@ def index_documents(es, encoder, data_dir="data", batch_size=8):
         embeddings = encoder.encode(batch_texts, batch_size=batch_size)
         for doc, embedding in zip(batch_docs, embeddings):
             doc["dense_vector"] = embedding.tolist()
-            es.index(index=ES_INDEX_DENSE, document=doc)
+            es.index(index=settings.es_index_dense, document=doc)
 
-    print(f"Indexed {len(json_files_info)} documents to {ES_INDEX_DENSE}")
+    print(f"Indexed {len(json_files_info)} documents to {settings.es_index_dense}")
 
 
 if __name__ == "__main__":

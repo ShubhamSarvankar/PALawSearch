@@ -10,7 +10,7 @@ from tqdm import tqdm
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk, BulkIndexError
 
-from config import ES_PASSWORD, ES_HOST, ES_INDEX_BM25
+from config.settings import settings
 
 from datetime import datetime
 import urllib3
@@ -54,8 +54,8 @@ def create_bm25_index():
     indexing-friendly settings (no replicas, no auto-refresh).
     """
     es = Elasticsearch(
-        ES_HOST,
-        basic_auth=("elastic", ES_PASSWORD),
+        settings.es_host,
+        basic_auth=("elastic", settings.es_password),
         verify_certs=False,
     )
 
@@ -132,12 +132,12 @@ def create_bm25_index():
     }
 
 
-    if es.indices.exists(index=ES_INDEX_BM25):
-        print(f"Index {ES_INDEX_BM25} already exists. Deleting...")
-        es.indices.delete(index=ES_INDEX_BM25)
+    if es.indices.exists(index=settings.es_index_bm25):
+        print(f"Index {settings.es_index_bm25} already exists. Deleting...")
+        es.indices.delete(index=settings.es_index_bm25)
 
-    es.indices.create(index=ES_INDEX_BM25, body=mapping)
-    print(f"Created index: {ES_INDEX_BM25}")
+    es.indices.create(index=settings.es_index_bm25, body=mapping)
+    print(f"Created index: {settings.es_index_bm25}")
 
     return es
 
@@ -226,7 +226,7 @@ def index_documents(es, data_dir="data", batch_size=500):
         doc = build_doc(case_data)
 
         action = {
-            "_index": ES_INDEX_BM25,
+            "_index": settings.es_index_bm25,
             "_source": doc,
         }
         actions.append(action)
@@ -248,13 +248,13 @@ def index_documents(es, data_dir="data", batch_size=500):
             print("Bulk indexing error in final batch; first error:", e.errors[0])
             raise
 
-    print(f"Indexed {total_docs} documents to {ES_INDEX_BM25}")
+    print(f"Indexed {total_docs} documents to {settings.es_index_bm25}")
 
     # Optional: restore more normal index settings after bulk indexing
     try:
         # Give ES more time to apply settings on a big index
         es.options(request_timeout=60).indices.put_settings(
-            index=ES_INDEX_BM25,
+            index=settings.es_index_bm25,
             body={"index": {"refresh_interval": "1s"}}
         )
     except Exception as e:

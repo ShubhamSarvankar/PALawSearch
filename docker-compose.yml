@@ -1,0 +1,22 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ES_PASSWORD}
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    mem_limit: 4g
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    # persistence off — cache only, no durability needed
+    command: redis-server --save "" --appendonly no
+
+volumes:
+  es_data:

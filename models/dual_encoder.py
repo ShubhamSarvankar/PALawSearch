@@ -1,21 +1,19 @@
-"""
-Dual-Encoder using Legal-BERT for generating dense vectors
-Used for coarse-grained retrieval stage
-"""
 try:
     import torch
     TORCH_IMPORT_ERROR = None
 except OSError as e:
-    # Torch failed to load (e.g., DLL init error on Windows)
+    # DLL init can fail on Windows if CUDA runtime is missing
     torch = None
     TORCH_IMPORT_ERROR = e
 from transformers import AutoTokenizer, AutoModel
-from config import DUAL_ENCODER_MODEL
+from config.settings import settings
 import numpy as np
 
 
 class DualEncoder:
-    def __init__(self, model_name=DUAL_ENCODER_MODEL, device=None):
+    def __init__(self, model_name=None, device=None):
+        if model_name is None:
+            model_name = settings.encoder_model_path
         """
         Initialize dual-encoder model
 

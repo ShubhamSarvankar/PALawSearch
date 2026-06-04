@@ -1,11 +1,16 @@
 import hashlib
-import redis
-from config import REDIS_HOST, REDIS_PORT
 import json
+import redis
+from config.settings import settings
+
 
 class SearchCache:
     def __init__(self):
-        self.redis = redis.Redis(host = REDIS_HOST, port = REDIS_PORT, decode_responses = True)
+        self.redis = redis.Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            decode_responses=True,
+        )
     
     def get(self, query, method):
         key = hashlib.md5(f"{query}:{method}".encode()).hexdigest()

@@ -2,8 +2,8 @@
 API Routes for Legal Case Search
 """
 from flask import request, jsonify
-from config import ES_INDEX_BM25, ES_INDEX_DENSE, TOP_K_RERANK
-from cache.redis import SearchCache 
+from config.settings import settings
+from cache.redis import SearchCache
 
 def register_routes(app, es, get_bm25_searcher, get_dense_searcher, get_reranker, get_bm25_reranker, get_rag_service=None):
     """
@@ -100,7 +100,7 @@ def register_routes(app, es, get_bm25_searcher, get_dense_searcher, get_reranker
                     all_results = cached
                 else:
                     ranker = get_reranker()
-                    all_results = ranker.search_and_rerank(query_text, top_k=TOP_K_RERANK)
+                    all_results = ranker.search_and_rerank(query_text, top_k=settings.top_k_rerank)
                     cache.set(query_text, method, all_results)
 
                 start = (page - 1) * size
@@ -120,7 +120,7 @@ def register_routes(app, es, get_bm25_searcher, get_dense_searcher, get_reranker
                     all_results = cached
                 else:
                     ranker = get_bm25_reranker()
-                    all_results = ranker.search_and_rerank(query_text, top_k=TOP_K_RERANK)
+                    all_results = ranker.search_and_rerank(query_text, top_k=settings.top_k_rerank)
                     cache.set(query_text, method, all_results)
 
                 start = (page - 1) * size
@@ -165,7 +165,7 @@ def register_routes(app, es, get_bm25_searcher, get_dense_searcher, get_reranker
         """
         try:
             index_type = request.args.get("index", "bm25").lower()
-            index_name = ES_INDEX_BM25 if index_type == "bm25" else ES_INDEX_DENSE
+            index_name = settings.es_index_bm25 if index_type == "bm25" else settings.es_index_dense
 
             response = es.search(
                 index=index_name,
@@ -197,22 +197,22 @@ def register_routes(app, es, get_bm25_searcher, get_dense_searcher, get_reranker
             bm25_stats = None
             dense_stats = None
 
-            if es.indices.exists(index=ES_INDEX_BM25):
-                bm25_stats = es.count(index=ES_INDEX_BM25)["count"]
+            if es.indices.exists(index=settings.es_index_bm25):
+                bm25_stats = es.count(index=settings.es_index_bm25)["count"]
 
-            if es.indices.exists(index=ES_INDEX_DENSE):
-                dense_stats = es.count(index=ES_INDEX_DENSE)["count"]
+            if es.indices.exists(index=settings.es_index_dense):
+                dense_stats = es.count(index=settings.es_index_dense)["count"]
 
             return jsonify({
                 "status": "healthy",
                 "elasticsearch": "connected",
                 "indices": {
                     "bm25": {
-                        "name": ES_INDEX_BM25,
+                        "name": settings.es_index_bm25,
                         "documents": bm25_stats
                     },
                     "dense": {
-                        "name": ES_INDEX_DENSE,
+                        "name": settings.es_index_dense,
                         "documents": dense_stats
                     }
                 }

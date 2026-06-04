@@ -1,19 +1,24 @@
-# Data files
-data/
-data/**/*.json
-term_postings.json
-
-# Environment variables
+# Secrets — never commit
 .env
 
-# Python
+# Data pipeline — can be reproduced; some files are large
+data/
+*.jsonl
+
+# Model checkpoints — large binaries, versioned by run manifests
+models/checkpoints/
+
+# Python virtualenv
+.venv/
+venv/
+env/
+
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
 
 # IDE
 .vscode/
@@ -24,3 +29,16 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Node (frontend)
+frontend/node_modules/
+
+# Claude Code internal
+.claude/
+
+# Legacy — superseded by data/ rule but kept explicit
+term_postings.json
+architecture.md
+implementation_plan.md
+
+gate.py
