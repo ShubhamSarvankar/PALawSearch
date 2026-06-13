@@ -13,12 +13,14 @@ models/checkpoints/
 venv/
 env/
 
-# Python bytecode
+# Python bytecode / build artifacts
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.egg-info/
+.pytest_cache/
 
 # IDE
 .vscode/
@@ -36,9 +38,9 @@ frontend/node_modules/
 # Claude Code internal
 .claude/
 
-# Legacy — superseded by data/ rule but kept explicit
+# Legacy / internal — not part of the shipped codebase
 term_postings.json
 architecture.md
 implementation_plan.md
-
 gate.py
+batch_download.py

@@ -260,11 +260,65 @@ def index_documents(es, data_dir="data", batch_size=500):
     except Exception as e:
         print(f"Warning: failed to update index refresh_interval: {e}")
 
+def index_from_jsonl(es, jsonl_path="data/parsed/cases.jsonl", batch_size=500):
+    """
+    Index all documents from the pre-parsed cases.jsonl produced by ingest/parse.py.
+    Fields in the JSONL are already flat strings; no ZIP extraction needed.
+    """
+    import json as _json
+
+    actions = []
+    total = 0
+
+    with open(jsonl_path, encoding="utf-8") as f:
+        for line in tqdm(f, desc="Indexing BM25 cases"):
+            case = _json.loads(line)
+            doc = {
+                "id":               case.get("id"),
+                "name":             case.get("name", ""),
+                "decision_date":    normalize_decision_date(case.get("decision_date")),
+                "court_name":       case.get("court_name", ""),
+                "jurisdiction_name": case.get("jurisdiction", ""),
+                "parties":          case.get("parties", ""),
+                "judges":           case.get("judges", ""),
+                "word_count":       case.get("word_count", 0),
+                "head_matter":      case.get("head_matter", ""),
+                "full_text":        case.get("full_text", ""),
+            }
+            actions.append({"_index": settings.es_index_bm25, "_source": doc})
+            total += 1
+
+            if len(actions) >= batch_size:
+                try:
+                    bulk(es, actions, request_timeout=300)
+                except BulkIndexError as e:
+                    print("Bulk indexing error; first error:", e.errors[0])
+                    raise
+                actions = []
+
+    if actions:
+        try:
+            bulk(es, actions, request_timeout=300)
+        except BulkIndexError as e:
+            print("Bulk indexing error in final batch:", e.errors[0])
+            raise
+
+    print(f"Indexed {total} documents to {settings.es_index_bm25}")
+
+    try:
+        es.options(request_timeout=60).indices.put_settings(
+            index=settings.es_index_bm25,
+            body={"index": {"refresh_interval": "1s"}}
+        )
+    except Exception as e:
+        print(f"Warning: failed to restore refresh_interval: {e}")
+
+
 if __name__ == "__main__":
     print("Creating BM25 index...")
     es = create_bm25_index()
 
-    print("Indexing documents...")
-    index_documents(es, data_dir="data", batch_size=500)
+    print("Indexing documents from data/parsed/cases.jsonl ...")
+    index_from_jsonl(es, jsonl_path="data/parsed/cases.jsonl", batch_size=500)
 
     print("Done!")
